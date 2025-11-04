@@ -6,9 +6,9 @@
   export let size = 600
 </script>
 
-<div class="w-full h-full grid place-items-center">
+<div class="w-full grid place-items-center">
   {#if browser}
-    <Canvas class="w-full h-full" dpr={[1, 2]}>
+    <Canvas style={`width:${size}px;height:${size}px`} dpr={[1, 2]}>
       <T.PerspectiveCamera makeDefault position={[0, 0, 3]}>
         <OrbitControls enableDamping={true} dampingFactor={0.05} />
       </T.PerspectiveCamera>
