@@ -22,8 +22,8 @@
     "vite": "^6.3.0"
   },
   "dependencies": {
-    "@threlte/core": "^7.3.0",
-    "@threlte/extras": "^8.10.4",
+    "@threlte/core": "^8.1.8",
+    "@threlte/extras": "^9.6.0",
     "three": "^0.170.0"
   }
 }
