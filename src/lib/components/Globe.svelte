@@ -1,13 +1,13 @@
 <script lang="ts">
   import { Canvas, T } from '@threlte/core'
   import { OrbitControls } from '@threlte/extras'
-  import { ClientOnly } from '@sveltejs/kit'
+  import { browser } from '$app/environment'
 
   export let size = 600
 </script>
 
 <div class="w-full h-full grid place-items-center">
-  <ClientOnly>
+  {#if browser}
     <Canvas class="w-full h-full" dpr={[1, 2]}>
       <T.PerspectiveCamera makeDefault position={[0, 0, 3]}>
         <OrbitControls enableDamping={true} dampingFactor={0.05} />
@@ -21,8 +21,9 @@
       </T.Mesh>
 
     </Canvas>
-    <p slot="fallback" class="text-slate-400">Loading 3D…</p>
-  </ClientOnly>
+  {:else}
+    <p class="text-slate-400">Loading 3D…</p>
+  {/if}
 </div>
 
 <style>
