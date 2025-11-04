@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+
+# sveltekit
+.svelte-kit/
+build/
+dist/
+
+# env
+.env*
+
+# logs
+*.log
+
+# tooling
+.vercel/
+
