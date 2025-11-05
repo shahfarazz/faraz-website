@@ -6,6 +6,10 @@
   import { onMount, onDestroy } from 'svelte'
   import { TextureLoader, RepeatWrapping, LinearFilter } from 'three'
   import { SRGBColorSpace, LinearSRGBColorSpace } from 'three'
+  import Pin from '$lib/components/Pin.svelte'
+  import { pins } from '$lib/pins'
+  import { latLonToCartesian } from '$lib/globe/coords'
+  import { goto } from '$app/navigation'
 
   
   let dpr = 1
@@ -202,6 +206,14 @@
             <T.SphereGeometry args={[1, 128, 128]} />
             <T.ShaderMaterial uniforms={uniforms} vertexShader={vertexShader} fragmentShader={fragmentShader} />
           </T.Mesh>
+
+          {#each pins as p}
+            <Pin
+              position={latLonToCartesian(1.03, p.lat, p.lon)}
+              color={p.color || '#22d3ee'}
+              onClick={() => goto(p.href)}
+            />
+          {/each}
         </T.Group>
 
         <!-- Cloud layer -->
