@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Canvas, T } from '@threlte/core'
-  import { OrbitControls, Stars } from '@threlte/extras'
+  import { OrbitControls, Stars, HTML, interactivity } from '@threlte/extras'
   import { browser } from '$app/environment'
   import { AdditiveBlending, BackSide } from 'three'
   import { onMount, onDestroy } from 'svelte'
@@ -19,6 +19,67 @@
   let group: any
   let raf = 0
   let start = 0
+  let selected: string | null = null
+  let controlsEnabled = true
+  let cameraPos: [number, number, number] = [0, 0, 3]
+  let target: [number, number, number] = [0, 0, 0]
+  let flyRaf = 0
+
+  function flyTo(lat: number, lon: number) {
+    const globeCenter: [number, number, number] = [0, 0, 0]
+    const surfacePos = latLonToCartesian(1.03, lat, lon)
+
+    // Normalize pin direction from globe center
+    const len = Math.hypot(surfacePos[0], surfacePos[1], surfacePos[2]) || 1
+    const n: [number, number, number] = [
+      surfacePos[0] / len,
+      surfacePos[1] / len,
+      surfacePos[2] / len
+    ]
+
+    // Distance from center to camera for fly-to
+    const distance = 2.1
+    const camGoal: [number, number, number] = [
+      n[0] * distance,
+      n[1] * distance,
+      n[2] * distance
+    ]
+
+    const camStart: [number, number, number] = [...cameraPos]
+    const t0 = performance.now()
+    const duration = 1000
+    const ease = (x: number) =>
+      x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2
+
+    controlsEnabled = false
+    const step = () => {
+      const t = Math.min(1, (performance.now() - t0) / duration)
+      const k = ease(t)
+      cameraPos = [
+        camStart[0] + (camGoal[0] - camStart[0]) * k,
+        camStart[1] + (camGoal[1] - camStart[1]) * k,
+        camStart[2] + (camGoal[2] - camStart[2]) * k
+      ]
+      // Keep orbit target fixed on globe center
+      target = globeCenter
+
+      if (t < 1) flyRaf = requestAnimationFrame(step)
+      else controlsEnabled = true
+    }
+
+    if (flyRaf) cancelAnimationFrame(flyRaf)
+    flyRaf = requestAnimationFrame(step)
+  }
+
+
+  function handlePinClick(pin: { id: string; lat: number; lon: number; href: string }) {
+    selected = pin.id
+    console.log('Clicked pin:', pin.id)
+    flyTo(pin.lat, pin.lon)
+  }
+
+  let atmoMesh: any
+  let cloudMesh: any
 
   onMount(() => {
     if (!browser) return
@@ -38,10 +99,14 @@
       raf = requestAnimationFrame(loop)
     }
     raf = requestAnimationFrame(loop)
+     // turn off raycasting so these meshes don't steal clicks
+    if (atmoMesh) atmoMesh.raycast = () => {}
+    if (cloudMesh) cloudMesh.raycast = () => {}
   })
 
   onDestroy(() => {
     if (raf) cancelAnimationFrame(raf)
+    if (flyRaf) cancelAnimationFrame(flyRaf)
   })
 
   const vertexShader = /* glsl */ `
@@ -180,27 +245,35 @@
     })
 
   });
+
+  
 </script>
 
 <div class="w-full grid place-items-center">
   {#if browser}
     <div style={`width:${size}px;height:${size}px`}>
-      <Canvas dpr={dpr}>
-        <T.PerspectiveCamera makeDefault position={[0, 0, 3]}>
-          <OrbitControls enableDamping={true} dampingFactor={0.05} />
+      <Canvas dpr={dpr} >
+        {#key browser}
+          {interactivity()}
+        {/key}
+        <T.PerspectiveCamera makeDefault position={cameraPos}>
+          <OrbitControls target={target} enabled={controlsEnabled} enableDamping={true} dampingFactor={0.05} />
         </T.PerspectiveCamera>
+        
+
         <T.AmbientLight intensity={0.6} />
         <T.DirectionalLight position={[3, 3, 3]} intensity={1.1} />
 
         <Stars radius={50} depth={20} count={3000} factor={2} saturation={0} fade={true} />
 
+        
         <!-- Atmosphere glow -->
-        <T.Mesh>
+        <T.Mesh bind:this={atmoMesh}>
           <T.SphereGeometry args={[1.05, 64, 64]} />
           <T.MeshBasicMaterial color="#6fc4ff" transparent={true} opacity={0.12} side={BackSide} blending={AdditiveBlending} />
         </T.Mesh>
 
-        <!-- Planet with procedural islands -->
+        <!-- Planet with procedural islands + pins -->
         <T.Group bind:this={group} rotation={[0.4, 0.8, 0]}>
           <T.Mesh>
             <T.SphereGeometry args={[1, 128, 128]} />
@@ -211,14 +284,22 @@
             <Pin
               position={latLonToCartesian(1.03, p.lat, p.lon)}
               color={p.color || '#22d3ee'}
-              onClick={() => goto(p.href)}
+              on:click={() => handlePinClick(p)}
             />
+            <!-- {#if selected === p.id}
+              <HTML position={latLonToCartesian(1.10, p.lat, p.lon)} transform>
+                <button
+                  class="px-3 py-1 rounded-md text-sm font-medium shadow bg-slate-950/80 backdrop-blur border border-slate-700 text-slate-100 hover:bg-slate-800"
+                  on:click={() => goto(p.href)}
+                >{p.label}</button>
+              </HTML>
+            {/if} -->
           {/each}
         </T.Group>
 
         <!-- Cloud layer -->
-        <T.Mesh>
-          <T.SphereGeometry args={[1.02, 128, 128]} /> <!-- slightly larger than planet -->
+        <T.Mesh bind:this={cloudMesh}>
+          <T.SphereGeometry args={[1.02, 128, 128]} />
           <T.ShaderMaterial
             transparent={true}
             depthWrite={false}
@@ -228,6 +309,8 @@
           />
         </T.Mesh>
 
+        
+
 
       </Canvas>
     </div>
@@ -236,6 +319,7 @@
   {/if}
 </div>
 
-<style>
-  div { min-height: 400px }
+<style> 
+  :global(canvas) { pointer-events: auto !important; } 
+  :global([style*="touch-action: none"]) { pointer-events: auto !important; touch-action: auto !important; } 
 </style>
