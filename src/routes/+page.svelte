@@ -13,9 +13,7 @@
   </p>
 
   <!-- 🟢 Wrap the Canvas around your Globe component -->
-  <div class="w-full max-w-[720px] aspect-square border border-slate-700 rounded-lg overflow-hidden">
-    <Canvas dpr={2}>
+    <Canvas>
       <Globe />
     </Canvas>
-  </div>
 </main>

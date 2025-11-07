@@ -1,22 +1,28 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
   import { T } from '@threlte/core'
   import * as THREE from 'three'
 
   export let position: [number, number, number]
   export let color = '#ff0000'
 
-  const dispatch = createEventDispatcher()
+  // Accept a callback prop instead of dispatching an event
+  /** @type {(event: THREE.IntersectionEvent<MouseEvent>) => void} */
+  export let onClick: (e: any) => void
 
   let rotation: [number, number, number] = [0, 0, 0]
   $: {
     const dir = new THREE.Vector3(...position).normalize()
-    const q = new THREE.Quaternion().setFromUnitVectors(
-      new THREE.Vector3(0, 1, 0),
-      dir
-    )
-    const e = new THREE.Euler().setFromQuaternion(q)
-    rotation = [e.x, e.y, e.z]
+    const q   = new THREE.Quaternion().setFromUnitVectors(
+                 new THREE.Vector3(0, 1, 0),
+                 dir
+               )
+    const eul = new THREE.Euler().setFromQuaternion(q)
+    rotation = [eul.x, eul.y, eul.z]
+  }
+
+  function handleClick(e: any) {
+    e.stopPropagation()
+    if (onClick) onClick(e)
   }
 </script>
 
@@ -28,13 +34,7 @@
   </T.Mesh>
 
   <!-- Head -->
-  <T.Mesh
-    position={[0, 0.02, 0]}
-    onclick={(e) => {
-      e.stopPropagation()
-      dispatch('click') // fires Svelte event
-    }}
-  >
+  <T.Mesh position={[0, 0.02, 0]} onclick={handleClick}>
     <T.SphereGeometry args={[0.02, 32, 32]} />
     <T.MeshBasicMaterial color={color} toneMapped={false} />
   </T.Mesh>

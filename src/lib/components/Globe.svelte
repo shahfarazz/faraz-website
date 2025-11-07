@@ -30,30 +30,34 @@
   let target: [number, number, number] = [0, 0, 0]
   let flyRaf: number
   const { camera, invalidate } = useThrelte()
+  let globe: THREE.Mesh | null = null
 
   // Convert lat/lon to 3D coordinates on the globe
   
 
-  export function flyTo(lat: number, lon: number) {
+  export function flyTo(e) {
     const cam = $camera
+
+    // console.log("✈️ Flying to", { lat, lon })
 
     if (!cam) {
       console.warn('⏳ Waiting for camera to attach...')
-      setTimeout(() => flyTo(lat, lon), 150)
+      // setTimeout(() => flyTo(lat, lon), 150)
       return
     }
 
     // Compute target & direction
-    const hit = new THREE.Vector3(...latLonToCartesian(1.03, lat, lon))
-    const globeCenter = new THREE.Vector3(0, 0, 0)
-    const direction = hit.clone().normalize()
+    const hit = e.point.clone()
+    const globeCenter = new THREE.Vector3()
+    globe?.getWorldPosition(globeCenter)
+    const direction = new THREE.Vector3().subVectors(hit, globeCenter).normalize()
 
     const lookStart = new THREE.Vector3()
     cam.getWorldDirection(lookStart)
     lookStart.add(cam.position)
 
 
-    const distance = 3 // how far away the camera stays
+    const distance = 2 // how far away the camera stays
 
     const camDest = hit.clone().add(direction.clone().multiplyScalar(distance))
 
@@ -73,8 +77,9 @@
       // Interpolate spherical motion (rotation around globe)
       cam.position.lerpVectors(camStart, camDest, k)
 
+      const lookAt = globeCenter.clone().lerp(hit, k * 1.2) // overshoot a bit for realism
       // Always look at globe center (pin ends up centered)
-      cam.lookAt(globeCenter)
+      cam.lookAt(lookAt)
 
       invalidate()
 
@@ -86,10 +91,9 @@
     requestAnimationFrame(animate)
   }
 
-  function handlePinClick(pin: { id: string; lat: number; lon: number; href: string }) {
-    selected = pin.id;
-    console.log('📍 Clicked pin:', pin.id);
-    flyTo(pin.lat, pin.lon);
+  function handlePinClick(e) {
+    // console.log('📍 Pin clicked', e);
+    flyTo(e);
   }
 
 
@@ -315,7 +319,7 @@
             <Pin
               position={latLonToCartesian(1.03, p.lat, p.lon)}
               color={p.color || '#22d3ee'}
-              on:click={() => handlePinClick(p)}
+              onClick={(e) => handlePinClick(e)}
             />
           {/each}
         </T.Group>
