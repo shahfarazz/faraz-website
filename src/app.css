@@ -10,3 +10,6 @@ body {
   @apply bg-slate-950 text-slate-100;
 }
 
+/* Ensure WebGL canvas receives pointer events for raycasting */
+canvas { pointer-events: auto; }
+[style*="touch-action: none"] { pointer-events: auto; touch-action: auto; }
