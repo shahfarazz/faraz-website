@@ -1,6 +1,6 @@
 <script lang="ts">
   import { Canvas, T, useThrelte } from '@threlte/core'
-  import { OrbitControls, Stars, HTML, interactivity } from '@threlte/extras'
+  import { OrbitControls, Stars, HTML, interactivity, Billboard } from '@threlte/extras'
   import { browser } from '$app/environment'
   import { AdditiveBlending, BackSide } from 'three'
   import { onMount, onDestroy } from 'svelte'
@@ -30,7 +30,7 @@
 
   // Convert lat/lon to 3D coordinates on the globe
   
-
+  // fly to the selected pin
   export function flyTo(e) {
     const cam = $camera
 
@@ -87,8 +87,9 @@
     requestAnimationFrame(animate)
   }
 
-  function handlePinClick(e) {
+  function handlePinClick(e,p) {
     // console.log('📍 Pin clicked', e);
+    selected = p.id;
     flyTo(e);
   }
 
@@ -240,9 +241,11 @@
             <Pin
               position={latLonToCartesian(1.03, p.lat, p.lon)}
               color={p.color || '#22d3ee'}
-              onClick={(e) => handlePinClick(e)}
+              onClick={(e) => handlePinClick(e,p)}
             />
+            
           {/each}
+          
         </T.Group>
 
         <!-- ✅ Cloud layer -->
@@ -256,7 +259,18 @@
             fragmentShader={cloudFragmentShader}
           />
         </T.Mesh>
+        <Billboard>
+          <HTML position={[1, 0, 1]}>
+            <div class="absolute top-1/2 -translate-y-1/2 w-20
+              p-4 rounded-lg 
+           bg-slate-900/80 text-slate-100 border border-slate-700 shadow 
+           backdrop-blur pointer-events-auto">
+              Globe Info
+            </div>
+          </HTML>
+        </Billboard>
     </div>
+    
   {:else}
     <p class="text-slate-400">Loading 3D…</p>
   {/if}
